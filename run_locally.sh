@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+if [ -z ${SPARK_HOME+x} ]; then echo "SPARK_HOME is not set"; exit 1;fi
+
 sbt package
 
 $SPARK_HOME/bin/spark-submit \
