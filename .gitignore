@@ -3,5 +3,5 @@
 **/target
 project/project/**
 .metals/
-.bloop/
+**/.bloop/
 .bsp/
