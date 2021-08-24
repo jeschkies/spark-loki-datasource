@@ -10,6 +10,8 @@ import org.apache.spark.sql.execution.streaming._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.unsafe.types.UTF8String
+import java.time.Instant
+import org.apache.spark.internal.Logging
 
 
 case class LokiSourceOffset(ts: Long) extends Offset {
@@ -29,11 +31,16 @@ object LokiSourceOffset {
     }
 
     def fromJson(json: String): LokiSourceOffset = LokiSourceOffset(read(json)("ts").str.toLong)
+
+    def now(): LokiSourceOffset = {
+        // This precision is fine for us since we control the offset.
+        val now = Instant.now()
+        val nanoseconds: Long = now.getEpochSecond() * 1000000000L
+        LokiSourceOffset(nanoseconds)
+    }
 }
 
-class LokiSource(sqlContext: SQLContext, parameters: Map[String, String]) extends Source {
-
-    var offset: Offset = LokiSourceOffset(1627213800000000000L)
+class LokiSource(sqlContext: SQLContext, parameters: Map[String, String]) extends Source with Logging {
 
     private val sc = sqlContext.sparkContext
     private val lokiConfig = LokiConfig.fromSparkConf(sc.getConf) 
@@ -43,19 +50,31 @@ class LokiSource(sqlContext: SQLContext, parameters: Map[String, String]) extend
 
     def stop(): Unit = ???
     
+    /**
+      * The maximum offset is always up until now. So we return the current time in nano seconds.
+      *
+      * @return The current time in nanoseconds.
+      */
     override def getOffset: Option[Offset] = synchronized {
-        Option(offset)
+        Option(LokiSourceOffset.now())
     }
 
-    override def commit(end: Offset): Unit = offset = end
+    override def commit(end: Offset): Unit = {
+        logInfo(
+        s"""Committing offset..
+            |  end: ${end.json()}
+            |""".stripMargin)
+    }
     
     def getBatch(start: Option[Offset], end: Offset): DataFrame = {
 
-        // nanoTime might be slow.
-        lazy val now = LokiSourceOffset(1627213800000000000L)//LokiSourceOffset(System.nanoTime())
+        // If no start is provided we are on our first run an use the configured start.
+        val actualStart = start.map(LokiSourceOffset.fromOffset).getOrElse(LokiSourceOffset(lokiSourceConfig.start))
+
+        // TODO: Validate that we actually get new offsets each time.
         val internalRdd = new LokiSourceRdd(
             sc,
-            start.map(LokiSourceOffset.fromOffset).getOrElse(now),
+            actualStart,
             LokiSourceOffset.fromOffset(end),
             lokiConfig,
             lokiSourceConfig

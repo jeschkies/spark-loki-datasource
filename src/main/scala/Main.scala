@@ -35,11 +35,12 @@ object Main {
     val spark = SparkSession.builder.appName("CI Analysis").getOrCreate()
     import spark.implicits._
 
-    val logql = """{job="ci"}"""
+    val logql = """{hostname="localhost.localdomain"}"""
     val lines = spark
       .readStream
       .format("org.apache.spark.sql.loki.stream.LokiSourceProvider")
       .option("loki.query", logql)
+      .option("loki.start", "1629819869111910096")
       .schema(LokiSource.schema)
       .load()
 
