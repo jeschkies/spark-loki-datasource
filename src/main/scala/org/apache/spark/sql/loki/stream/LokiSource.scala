@@ -62,6 +62,11 @@ class LokiSource(sqlContext: SQLContext, parameters: Map[String, String]) extend
         Option(LokiSourceOffset.now())
     }
 
+    /**
+      * Commit has no effect since Spark is persisting the offsets for us.
+      *
+      * @param end the end offset that Spark persisted.
+      */
     override def commit(end: Offset): Unit = {
         logInfo(
         s"""Committing offset..
