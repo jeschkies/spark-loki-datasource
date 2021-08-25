@@ -3,16 +3,12 @@ package org.apache.spark.sql.loki.stream
 import org.apache.spark.sql.{DataFrame, SQLContext}
 import org.apache.spark.sql.execution.streaming.{Offset, SerializedOffset, Source}
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
-import ujson._
-
-import org.apache.spark.sql._
-import org.apache.spark.sql.execution.streaming._
-import org.apache.spark.sql.types._
-import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.unsafe.types.UTF8String
+import org.apache.spark.sql.catalyst.InternalRow
 import java.time.Instant
 import org.apache.spark.internal.Logging
 
+import ujson._
 import scala.concurrent.duration._
 
 case class LokiSourceOffset(ts: Long) extends Offset {
@@ -43,6 +39,11 @@ object LokiSourceOffset {
     }
 }
 
+/**
+  * The main implementation of a Spark [[org.apache.spark.sql.execution.streaming.Source]].
+  * 
+  * The implementation is inspired by the [[https://github.com/RedisLabs/spark-redis Redis Spark library]].
+  */
 class LokiSource(sqlContext: SQLContext, parameters: Map[String, String]) extends Source with Logging {
 
     private val sc = sqlContext.sparkContext
