@@ -2,7 +2,6 @@ package org.apache.spark.sql.loki.stream
 
 import org.apache.spark.SparkConf
 
-// TODO: add limits etc
 case class LokiSourceConfig(query: String, start: Long)
 object LokiSourceConfig {
     def fromMap(config: Map[String, String]): LokiSourceConfig = {

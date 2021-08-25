@@ -8,6 +8,7 @@ import com.grafana.loki.LokiReceiver
 import org.apache.spark.sql.loki.stream.LokiSourceProvider
 import org.apache.spark.sql.loki.stream.LokiSource
 import org.apache.spark.sql.loki.stream.LokiEntry
+import org.apache.spark.sql.streaming.Trigger
 
 object Main {
 
@@ -53,6 +54,7 @@ object Main {
     val query = wordCounts.writeStream
       .outputMode(OutputMode.Complete())
       .format("console")
+      .trigger(Trigger.ProcessingTime("10 seconds"))
       .start()
 
     query.awaitTermination()
