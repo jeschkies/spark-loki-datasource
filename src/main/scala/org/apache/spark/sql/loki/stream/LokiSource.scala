@@ -13,10 +13,13 @@ import org.apache.spark.unsafe.types.UTF8String
 import java.time.Instant
 import org.apache.spark.internal.Logging
 
+import scala.concurrent.duration._
 
 case class LokiSourceOffset(ts: Long) extends Offset {
 
   override def json(): String = write(Js.Obj("ts" -> ts))
+
+  def +(add: Duration): LokiSourceOffset= LokiSourceOffset(ts + add.toNanos)
 }
 
 object LokiSourceOffset {
@@ -69,7 +72,12 @@ class LokiSource(sqlContext: SQLContext, parameters: Map[String, String]) extend
     def getBatch(start: Option[Offset], end: Offset): DataFrame = {
 
         // If no start is provided we are on our first run an use the configured start.
-        val actualStart = start.map(LokiSourceOffset.fromOffset).getOrElse(LokiSourceOffset(lokiSourceConfig.start))
+        val actualStart = start match {
+            case Some(o) =>
+                LokiSourceOffset.fromOffset(o) + 1.nanosecond
+            case None => LokiSourceOffset(lokiSourceConfig.start)
+        }
+        logInfo(s"Getting new batch: start=$actualStart end=$end")
 
         // TODO: Validate that we actually get new offsets each time.
         val internalRdd = new LokiSourceRdd(

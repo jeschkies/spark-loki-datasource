@@ -21,11 +21,15 @@ class LokiSourceRdd(sc: SparkContext, start: LokiSourceOffset, end: LokiSourceOf
     override def compute(split: Partition, context: TaskContext): Iterator[LokiEntry] = {
         // TODO: actually use split
         val s: Long = start.ts
+        val e: Long = end.ts
         val request = Http(lokiConfig.endpoint+"/loki/api/v1/query_range")
           .param("query", lokiSourceConfig.query)
+          .param("start", s.toString())
+          .param("end", e.toString())
+          .param("direction", "forward")
           .auth(lokiConfig.username, lokiConfig.password)
 
-        val response = request.param("start", s.toString()).asString
+        val response = request.asString
         if(response.is4xx) {
             logError(s"Failed to query logs from ${request.url}: ${response.body}")
             val cause = Try(response.throwError).failed.get
